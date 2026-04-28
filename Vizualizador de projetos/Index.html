@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Projetos</title>
+     <link rel="icon" type="image/png" href="./img/LOGO.svg">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    :root {
+        --primary: #6366f1;
+        --secondary: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --dark: #0f172a;
+        --light: #f8fafc;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        min-height: 100vh;
+        color: var(--light);
+    }
+    
+    .modern-header {
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    
+    .logo-container { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+        width: 40px; height: 40px;
+        background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    
+    .modern-card {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .modern-card::before {
+        content: ''; 
+        position: absolute; 
+        top: 0; left: 0; right: 0; height: 6px;
+        background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+        transition: all 0.3s ease;
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+    
+    /* ========== STATUS ATIVO - VERDE FORTE ========== */
+    .modern-card.status-ativo {
+        border-left: 6px solid var(--secondary);
+    }
+    .modern-card.status-ativo::before {
+        background: linear-gradient(90deg, var(--secondary), #34d399);
+    }
+    .modern-card.status-ativo .project-title span:first-child {
+        color: #86efac;
+    }
+    .modern-card.status-ativo .status-indicator {
+        background-color: var(--secondary);
+        box-shadow: 0 0 12px var(--secondary), 0 0 20px rgba(16, 185, 129, 0.4);
+        animation: pulse-green 2s infinite;
+    }
+    .modern-card.status-ativo:hover {
+        box-shadow: 0 12px 40px rgba(16, 185, 129, 0.3);
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+    
+    /* ========== STATUS INATIVO - VERMELHO FORTE ========== */
+    .modern-card.status-inativo {
+        border-left: 6px solid var(--danger);
+        background: linear-gradient(135deg, rgba(59, 24, 24, 0.9) 0%, rgba(30, 41, 59, 0.95) 100%);
+    }
+    .modern-card.status-inativo::before {
+        background: linear-gradient(90deg, var(--danger), #f87171);
+    }
+    .modern-card.status-inativo .project-title span:first-child {
+        color: #fca5a5;
+    }
+    .modern-card.status-inativo .status-indicator {
+        background-color: var(--danger);
+        box-shadow: 0 0 12px var(--danger), 0 0 20px rgba(239, 68, 68, 0.4);
+        animation: pulse-red 2s infinite;
+    }
+    .modern-card.status-inativo:hover {
+        box-shadow: 0 12px 40px rgba(239, 68, 68, 0.3);
+        border-color: rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Animações de pulsação */
+    @keyframes pulse-green {
+        0%, 100% { box-shadow: 0 0 12px var(--secondary), 0 0 20px rgba(16, 185, 129, 0.4); }
+        50% { box-shadow: 0 0 16px var(--secondary), 0 0 30px rgba(16, 185, 129, 0.6); }
+    }
+    @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 0 12px var(--danger), 0 0 20px rgba(239, 68, 68, 0.4); }
+        50% { box-shadow: 0 0 16px var(--danger), 0 0 30px rgba(239, 68, 68, 0.6); }
+    }
+    
+    .modern-badge {
+        display: inline-flex; align-items: center; padding: 0.4rem 0.8rem;
+        border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); margin: 0.2rem;
+    }
+    
+    .badge-cidade { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .badge-tecnologia { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .badge-node { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+    .badge-categoria { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+    .badge-area { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .badge-status-ativo { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .badge-status-inativo { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    
+    .status-indicator {
+        display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px;
+    }
+    
+    .filter-section {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .filter-main-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 0.5rem; }
+    .filter-expandable { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .filter-expandable.expanded { max-height: 300px; margin-top: 1rem; }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .filter-label { font-size: 0.875rem; font-weight: 600; color: #94a3b8; white-space: nowrap; }
+    
+    .filter-tag {
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 20px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .filter-tag:hover { background: rgba(99, 102, 241, 0.2); }
+    .filter-tag.active { background: var(--primary); color: white; }
+    
+    .expand-filters-btn, .clear-filters-btn {
+        background: none; border: none; color: var(--primary); cursor: pointer;
+        font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem; border-radius: 8px; transition: all 0.2s ease;
+    }
+    .expand-filters-btn:hover, .clear-filters-btn:hover { background: rgba(99, 102, 241, 0.1); }
+    
+    .modern-btn {
+        display: inline-flex; align-items: center; gap: 8px; padding: 0.75rem 1.5rem;
+        border-radius: 10px; font-weight: 600; border: none; cursor: pointer;
+        transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%); color: white; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); }
+    .btn-secondary { background: rgba(30, 41, 59, 0.9); color: var(--light); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .btn-secondary:hover { background: rgba(30, 41, 59, 1); border-color: rgba(99, 102, 241, 0.5); }
+    
+    .search-container { position: relative; flex-grow: 1; max-width: 400px; }
+    .search-input {
+        width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 10px;
+        background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--light); transition: all 0.3s ease;
+    }
+    .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+    .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    
+    .stats-container { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .stat-card {
+        background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border-radius: 12px;
+        padding: 1rem 1.5rem; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1);
+        flex: 1; min-width: 150px;
+    }
+    .stat-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-total .stat-value { color: var(--primary); }
+    .stat-active .stat-value { color: var(--secondary); }
+    .stat-inactive .stat-value { color: var(--danger); }
+    
+    .tabs-container { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .modern-tab {
+        padding: 0.75rem 1.5rem; border-radius: 10px; background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1); color: var(--light); cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .modern-tab.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+    .modern-tab:hover { background: rgba(99, 102, 241, 0.2); }
+    
+    .project-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
+    .project-link { color: #94a3b8; transition: color 0.2s ease; }
+    .project-link:hover { color: var(--primary); }
+    .badges-container { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .project-details { margin-bottom: 1rem; }
+    .detail-item { margin-bottom: 0.5rem; display: flex; }
+    .detail-label { font-weight: 600; min-width: 120px; color: #94a3b8; }
+    
+    .toggle-address {
+        background: none; border: none; color: var(--primary); cursor: pointer;
+        font-weight: 600; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;
+    }
+    .address-info {
+        margin-top: 1rem; padding: 1rem; background: rgba(30, 41, 59, 0.5);
+        border-radius: 8px; border-left: 3px solid var(--primary);
+    }
+    
+    .modern-loading {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(15, 23, 42, 0.9); z-index: 50; align-items: center; justify-content: center;
+        backdrop-filter: blur(5px);
+    }
+    .loading-spinner {
+        width: 60px; height: 60px; border: 4px solid rgba(99, 102, 241, 0.3);
+        border-radius: 50%; border-top: 4px solid var(--primary); animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .wide-container { max-width: 95%; margin-left: auto; margin-right: auto; }
+    @media (min-width: 1400px) { .wide-container { max-width: 1400px; } }
+    
+    @media (max-width: 768px) {
+        .modern-header { flex-direction: column; gap: 1rem; padding: 1rem; }
+        .actions-container { flex-direction: column; width: 100%; }
+        .modern-btn { width: 100%; justify-content: center; }
+        .search-container { width: 100%; max-width: 100%; }
+        .filter-main-row { flex-direction: column; align-items: flex-start; }
+    }
+    
+    .hidden { display: none !important; }
+</style>
+</head>
+<body>
+    <header class="modern-header text-white p-4 flex justify-between items-center flex-wrap">
+        <div class="logo-container">
+            <div class="logo-icon"><i class="fas fa-project-diagram"></i></div>
+            <div>
+                <h1 class="text-xl font-bold">VISUALIZADOR DE PROJETOS</h1>
+                <p class="text-sm text-gray-400">Life Telecom</p>
+            </div>
+        </div>
+        
+        <div class="project-counter flex gap-6 mt-4 lg:mt-0">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span>Ativos: <strong id="activeCount">0</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <span>Inativos: <strong id="inactiveCount">0</strong></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
+                <span>Total: <strong id="totalCount">0</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6 wide-container">
+        <div class="stats-container">
+            <div class="stat-card stat-total">
+                <div class="stat-value" id="totalCountStat">0</div>
+                <div class="stat-label">Total de Projetos</div>
+            </div>
+            <div class="stat-card stat-active">
+                <div class="stat-value" id="activeCountStat">0</div>
+                <div class="stat-label">Projetos Ativos</div>
+            </div>
+            <div class="stat-card stat-inactive">
+                <div class="stat-value" id="inactiveCountStat">0</div>
+                <div class="stat-label">Projetos Inativos</div>
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <div class="filter-main-row">
+                <div class="filter-group status-group">
+                    <span class="filter-label">Status:</span>
+                    <div class="filter-tag active" data-filter="all">Todos</div>
+                    <div class="filter-tag" data-filter="ativo">Ativos</div>
+                    <div class="filter-tag" data-filter="inativo">Inativos</div>
+                </div>
+                
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Pesquisar projetos..." class="search-input" aria-label="Pesquisar projetos">
+                </div>
+                
+                <div class="flex gap-2">
+                    <button class="expand-filters-btn" id="expandFiltersBtn" aria-label="Mais filtros">
+                        <i class="fas fa-sliders-h"></i><span>Mais Filtros</span>
+                    </button>
+                    <button class="clear-filters-btn" id="clearFiltersBtn" aria-label="Limpar filtros">
+                        <i class="fas fa-times-circle"></i><span>Limpar</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="filter-expandable" id="expandableFilters">
+                <div class="filter-row">
+                    <div class="filter-group tech-group">
+                        <span class="filter-label">Tecnologia:</span>
+                        <div class="filter-tag active" data-value="all">Todas</div>
+                        <div id="technologyFilters"></div>
+                    </div>
+                    
+                    <div class="filter-group city-group">
+                        <span class="filter-label">Cidade:</span>
+                        <div class="filter-tag active" data-value="all">Todas</div>
+                        <div id="cityFilters"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-4 items-center mb-6">
+            <div class="actions-container flex gap-4 flex-wrap">
+                <label class="modern-btn btn-primary" id="customUploadBtn">
+                    <i class="fas fa-upload"></i> Carregar Planilha
+                    <input type="file" id="inputExcel" class="hidden" accept=".xlsx,.xls" aria-label="Carregar planilha Excel">
+                </label>
+                <button id="exportCsvBtn" class="modern-btn btn-secondary">
+                    <i class="fas fa-download"></i> Exportar CSV
+                </button>
+                <button id="exportXlsxBtn" class="modern-btn btn-secondary">
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </button>
+            </div>
+        </div>
+        
+        <div id="tabsContainer" class="tabs-container"></div>
+        
+        <div id="tableContainer" class="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"></div>
+        
+        <div id="noResults" class="text-center py-12 text-gray-400 hidden">
+            <i class="fas fa-search text-6xl mb-4"></i>
+            <p class="text-xl">Nenhum projeto encontrado com os filtros atuais.</p>
+        </div>
+    </main>
+
+    <div id="loading" class="modern-loading">
+        <div class="text-center">
+            <div class="loading-spinner mb-4"></div>
+            <p>Processando arquivo...</p>
+        </div>
+    </div>
+
+    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800">
+        <p>© 2026 Visualizador de Projetos - Life Telecom</p>
+    </footer>
+
+   <script>
+    // Elementos
+    const inputExcel = document.getElementById("inputExcel");
+    const searchInput = document.getElementById("searchInput");
+    const customUploadBtn = document.getElementById("customUploadBtn");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const exportXlsxBtn = document.getElementById("exportXlsxBtn");
+    const expandFiltersBtn = document.getElementById("expandFiltersBtn");
+    const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+    const tableContainer = document.getElementById("tableContainer");
+    const noResults = document.getElementById("noResults");
+    const tabsContainer = document.getElementById("tabsContainer");
+
+    // Dados globais
+    let currentData = [];
+    let headers = [];
+    let allCards = [];
+
+    // Event listeners
+    inputExcel.addEventListener("change", handleFile);
+    customUploadBtn.addEventListener("click", () => inputExcel.click());
+    searchInput.addEventListener("input", debounce(applyFilters, 300));
+    exportCsvBtn.addEventListener("click", exportToCSV);
+    exportXlsxBtn.addEventListener("click", exportToXLSX);
+    expandFiltersBtn.addEventListener("click", toggleExpandFilters);
+    clearFiltersBtn.addEventListener("click", clearAllFilters);
+
+    // Delegação de eventos para filtros
+    document.addEventListener("click", (e) => {
+        const tag = e.target.closest(".filter-tag");
+        if (!tag) return;
+
+        const group = tag.closest(".filter-group");
+        if (!group) return;
+
+        if (group.classList.contains("status-group")) {
+            group.querySelectorAll(".filter-tag").forEach(t => t.classList.remove("active"));
+            tag.classList.add("active");
+        } else {
+            if (tag.dataset.value === "all") {
+                group.querySelectorAll(".filter-tag").forEach(t => t.classList.remove("active"));
+                tag.classList.add("active");
+            } else {
+                const allTag = group.querySelector('[data-value="all"]');
+                allTag.classList.remove("active");
+                tag.classList.toggle("active");
+                if (!group.querySelector('.filter-tag.active:not([data-value="all"])')) {
+                    allTag.classList.add("active");
+                }
+            }
+        }
+        applyFilters();
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    }
+
+    function toggleExpandFilters() {
+        const expandable = document.getElementById("expandableFilters");
+        expandable.classList.toggle("expanded");
+        const icon = expandFiltersBtn.querySelector("i");
+        const text = expandFiltersBtn.querySelector("span");
+        if (expandable.classList.contains("expanded")) {
+            icon.className = "fas fa-times";
+            text.textContent = "Menos Filtros";
+        } else {
+            icon.className = "fas fa-sliders-h";
+            text.textContent = "Mais Filtros";
+        }
+    }
+
+    function clearAllFilters() {
+        document.querySelectorAll(".filter-tag").forEach(tag => tag.classList.remove("active"));
+        document.querySelectorAll(".filter-group").forEach(group => {
+            group.querySelector('.filter-tag[data-value="all"], .filter-tag[data-filter="all"]')?.classList.add("active");
+        });
+        searchInput.value = "";
+        applyFilters();
+    }
+
+    function showLoading() { document.getElementById("loading").style.display = "flex"; }
+    function hideLoading() { document.getElementById("loading").style.display = "none"; }
+
+    function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+            alert("Por favor, selecione um arquivo Excel válido (.xlsx ou .xls)");
+            return;
+        }
+
+        showLoading();
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+
+                tabsContainer.innerHTML = "";
+                workbook.SheetNames.forEach((sheetName, index) => {
+                    const btn = document.createElement("button");
+                    btn.textContent = sheetName;
+                    btn.className = "modern-tab" + (index === 0 ? " active" : "");
+                    btn.addEventListener("click", () => {
+                        document.querySelectorAll(".modern-tab").forEach(b => b.classList.remove("active"));
+                        btn.classList.add("active");
+                        displaySheet(workbook.Sheets[sheetName]);
+                    });
+                    tabsContainer.appendChild(btn);
+                });
+
+                if (workbook.SheetNames.length > 0) {
+                    displaySheet(workbook.Sheets[workbook.SheetNames[0]]);
+                }
+                hideLoading();
+            } catch (err) {
+                alert("Erro ao processar o arquivo: " + err.message);
+                hideLoading();
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function displaySheet(sheet) {
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        if (jsonData.length === 0) {
+            tableContainer.innerHTML = "<p class='text-white col-span-3 text-center py-8'>Nenhum dado encontrado.</p>";
+            updateCounters();
+            return;
+        }
+
+        headers = jsonData[0];
+        currentData = jsonData.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => obj[h] = row[i]);
+            return obj;
+        });
+
+        tableContainer.innerHTML = "";
+        allCards = [];
+
+        const fragment = document.createDocumentFragment();
+        currentData.forEach(rowObj => {
+            const card = createCard(rowObj);
+            fragment.appendChild(card);
+            allCards.push(card);
+        });
+        tableContainer.appendChild(fragment);
+
+        updateDynamicFilters();
+        clearAllFilters(); // reseta e aplica filtro "Todos"
+    }
+
+    function updateDynamicFilters() {
+        const techSet = new Set();
+        const citySet = new Set();
+
+        currentData.forEach(row => {
+            if (row["Tecnologia"]) techSet.add(row["Tecnologia"]);
+            if (row["Cidade"]) citySet.add(row["Cidade"]);
+        });
+
+        const techContainer = document.getElementById("technologyFilters");
+        const cityContainer = document.getElementById("cityFilters");
+        techContainer.innerHTML = "";
+        cityContainer.innerHTML = "";
+
+        techSet.forEach(val => techContainer.appendChild(createFilterTag(val)));
+        citySet.forEach(val => cityContainer.appendChild(createFilterTag(val)));
+    }
+
+    function createFilterTag(value) {
+        const tag = document.createElement("div");
+        tag.className = "filter-tag";
+        tag.dataset.value = value;
+        tag.textContent = value;
+        return tag;
+    }
+
+    function createCard(row) {
+        const card = document.createElement("div");
+        card.className = "modern-card";
+
+        // === DETECÇÃO CORRETA DE STATUS ===
+        const statusCell = (row["Status"] || "").toString().trim();
+        let isAtivo = false;
+        let isInativo = false;
+
+        if (statusCell === "Ativo" || statusCell.toLowerCase() === "ativo") {
+            isAtivo = true;
+        } else if (statusCell === "Inativo" || statusCell.toLowerCase() === "inativo") {
+            isInativo = true;
+        }
+
+        if (isAtivo) {
+            card.classList.add("status-ativo");
+            card.dataset.status = "ativo";
+        } else if (isInativo) {
+            card.classList.add("status-inativo");
+            card.dataset.status = "inativo";
+        } else {
+            card.dataset.status = "outro";
+        }
+
+        // Dados para busca e filtros
+        card.dataset.tech = (row["Tecnologia"] || "").toString().toLowerCase();
+        card.dataset.city = (row["Cidade"] || "").toString().toLowerCase();
+        card.dataset.search = Object.values(row).join(" ").toLowerCase();
+
+        // Link do projeto
+        const linkProjeto = row["Link Projeto"];
+        const linkHtml = linkProjeto ? `<a href="${linkProjeto}" target="_blank" class="project-link" aria-label="Abrir link do projeto"><i class="fas fa-external-link-alt"></i></a>` : "";
+
+        // Badges
+        const badges = [];
+        if (row["Cidade"]) badges.push(`<span class="modern-badge badge-cidade"><i class="fas fa-city mr-1"></i>${row["Cidade"]}</span>`);
+        if (row["Tecnologia"]) badges.push(`<span class="modern-badge badge-tecnologia"><i class="fas fa-wifi mr-1"></i>${row["Tecnologia"]}</span>`);
+        if (row["Node"]) badges.push(`<span class="modern-badge badge-node"><i class="fas fa-server mr-1"></i>${row["Node"]}</span>`);
+        if (row["Categoria"]) badges.push(`<span class="modern-badge badge-categoria"><i class="fas fa-tag mr-1"></i>${row["Categoria"]}</span>`);
+        if (row["Area"]) badges.push(`<span class="modern-badge badge-area"><i class="fas fa-map-marker-alt mr-1"></i>${row["Area"]}</span>`);
+
+        // Badge de Status com cor e ícone corretos
+        if (row["Status"]) {
+            const badgeClass = isAtivo ? "badge-status-ativo" : "badge-status-inativo";
+            const icon = isAtivo ? "fa-check-circle" : "fa-times-circle";
+            badges.push(`
+                <span class="modern-badge ${badgeClass}">
+                    <i class="fas ${icon} mr-1"></i>${row["Status"]}
+                </span>
+            `);
+        }
+
+        // Informações adicionais
+        let additionalInfo = "";
+        for (const key in row) {
+            if (!["Nome","Cidade","Tecnologia","Node","Categoria","Area","Status","Endereço","Nº","Bairro","Link Projeto"].includes(key) && row[key]) {
+                additionalInfo += `<div class="detail-item"><span class="detail-label">${key}:</span> <span>${row[key]}</span></div>`;
+            }
+        }
+
+        // Endereço completo
+        const hasAddress = row["Endereço"] || row["Nº"] || row["Bairro"];
+        const addressHtml = hasAddress ? `
+            <button class="toggle-address" onclick="toggleAddress(this)">
+                <i class="fas fa-map"></i> Mostrar endereço completo
+            </button>
+            <div class="address-info hidden">
+                ${row["Endereço"] ? `<div class="detail-item"><span class="detail-label">Endereço:</span> <span>${row["Endereço"]}</span></div>` : ''}
+                ${row["Nº"] ? `<div class="detail-item"><span class="detail-label">Número:</span> <span>${row["Nº"]}</span></div>` : ''}
+                ${row["Bairro"] ? `<div class="detail-item"><span class="detail-label">Bairro:</span> <span>${row["Bairro"]}</span></div>` : ''}
+            </div>
+        ` : "";
+
+        card.innerHTML = `
+            <div class="project-title">
+                <span><span class="status-indicator"></span>${row["Nome"] || "Sem nome"}</span>
+                ${linkHtml}
+            </div>
+            <div class="badges-container">${badges.join("")}</div>
+            <div class="project-details">${additionalInfo}</div>
+            ${addressHtml}
+        `;
+
+        return card;
+    }
+
+    function toggleAddress(btn) {
+        const info = btn.nextElementSibling;
+        if (info.classList.contains("hidden")) {
+            info.classList.remove("hidden");
+            btn.innerHTML = '<i class="fas fa-map"></i> Ocultar endereço';
+        } else {
+            info.classList.add("hidden");
+            btn.innerHTML = '<i class="fas fa-map"></i> Mostrar endereço completo';
+        }
+    }
+
+    function applyFilters() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const statusTag = document.querySelector(".status-group .filter-tag.active");
+        const statusFilter = statusTag?.dataset.filter || "all";
+
+        const techTags = Array.from(document.querySelectorAll(".tech-group .filter-tag.active:not([data-value='all'])"))
+            .map(t => t.dataset.value.toLowerCase());
+        const cityTags = Array.from(document.querySelectorAll(".city-group .filter-tag.active:not([data-value='all'])"))
+            .map(t => t.dataset.value.toLowerCase());
+
+        let visibleCount = 0;
+
+        allCards.forEach(card => {
+            const matchesSearch = !searchTerm || card.dataset.search.includes(searchTerm);
+            const matchesStatus = statusFilter === "all" || card.dataset.status === statusFilter;
+            const matchesTech = techTags.length === 0 || techTags.includes(card.dataset.tech);
+            const matchesCity = cityTags.length === 0 || cityTags.includes(card.dataset.city);
+
+            if (matchesSearch && matchesStatus && matchesTech && matchesCity) {
+                card.classList.remove("hidden");
+                visibleCount++;
+            } else {
+                card.classList.add("hidden");
+            }
+        });
+
+        noResults.classList.toggle("hidden", visibleCount > 0);
+        updateCounters();
+    }
+
+    function updateCounters() {
+        const visibleCards = allCards.filter(card => !card.classList.contains("hidden"));
+        const total = visibleCards.length;
+        let active = 0, inactive = 0;
+
+        visibleCards.forEach(card => {
+            if (card.dataset.status === "ativo") active++;
+            else if (card.dataset.status === "inativo") inactive++;
+        });
+
+        document.getElementById("totalCount").textContent = total;
+        document.getElementById("totalCountStat").textContent = total;
+        document.getElementById("activeCount").textContent = active;
+        document.getElementById("activeCountStat").textContent = active;
+        document.getElementById("inactiveCount").textContent = inactive;
+        document.getElementById("inactiveCountStat").textContent = inactive;
+    }
+
+    function exportToCSV() {
+        if (currentData.length === 0) return alert("Nenhum dado para exportar.");
+        const visibleData = currentData.filter((_, i) => !allCards[i].classList.contains("hidden"));
+        const rows = [headers, ...visibleData.map(row => headers.map(h => row[h] ?? ""))];
+        const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g, '""')}"`).join(",")).join("\n");
+        downloadFile(csv, "projetos_filtrados.csv", "text/csv;charset=utf-8;");
+    }
+
+    function exportToXLSX() {
+        if (currentData.length === 0) return alert("Nenhum dado para exportar.");
+        const visibleData = currentData.filter((_, i) => !allCards[i].classList.contains("hidden"));
+        const rows = [headers, ...visibleData.map(row => headers.map(h => row[h] ?? ""))];
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Projetos");
+        XLSX.writeFile(wb, "projetos_filtrados.xlsx");
+    }
+
+    function downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // ==================== LINK DA PLANILHA NO ONEDRIVE ====================
+    const ONEDRIVE_URL = "/api/planilha";
+
+    // Carrega automaticamente quando a página abre
+    window.addEventListener("load", () => {
+        loadFromOneDrive();
+    });
+
+    async function loadFromOneDrive() {
+        showLoading();
+
+        try {
+            const response = await fetch(ONEDRIVE_URL);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+            // Limpa tabs anteriores
+            tabsContainer.innerHTML = "";
+
+            workbook.SheetNames.forEach((sheetName, index) => {
+                const btn = document.createElement("button");
+                btn.textContent = sheetName;
+                btn.className = "modern-tab" + (index === 0 ? " active" : "");
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll(".modern-tab").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    displaySheet(workbook.Sheets[sheetName]);
+                });
+                tabsContainer.appendChild(btn);
+            });
+
+            // Carrega a primeira aba automaticamente
+            if (workbook.SheetNames.length > 0) {
+                displaySheet(workbook.Sheets[workbook.SheetNames[0]]);
+            }
+
+            console.log("✅ Planilha carregada automaticamente do OneDrive!");
+
+        } catch (error) {
+            console.error("Erro ao carregar do OneDrive:", error);
+            alert("Não foi possível carregar a planilha automaticamente.\n\nVerifique se o link está correto e se você tem permissão.");
+        } finally {
+            hideLoading();
+        }
+    }
+</script>
+</body>
+</html>

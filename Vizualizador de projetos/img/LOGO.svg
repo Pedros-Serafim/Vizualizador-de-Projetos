@@ -1,0 +1,13 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+	<title>Novo Projeto</title>
+	<defs>
+		<linearGradient id="g1" x2="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-46.65,-8.226,5.678,-32.203,548.165,633.013)">
+			<stop offset="0" stop-color="#ffa800"/>
+			<stop offset="1" stop-color="#ffffff"/>
+		</linearGradient>
+	</defs>
+	<style>
+		.s0 { fill: url(#g1) } 
+	</style>
+	<path id="VP" class="s0" aria-label="VP"  d="m369.8 820h-83.7l-208.3-545.5h77.1l172.8 459.3 173.2-459.3h76.7zm454.3-484.8h-92.8v205h92.8q51.5 0 79.7-26.7 28.1-26.7 28.1-76 0-48.9-28.1-75.6-28.2-26.7-79.7-26.7zm-166.6 484.8v-545.4h166.6q91.7 0 138.5 41.6 47.1 41.3 47.1 121.3 0 80.8-47.1 122-46.8 41.3-138.5 41.3h-92.8v219.2z"/>
+</svg>
